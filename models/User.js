@@ -18,7 +18,7 @@ const User = sequelize.define('User', {
     },
     isAdmin: {
         type: DataTypes.BOOLEAN,
-        defaultValue: false, // Super Admin flag
+        defaultValue: true, // Super Admin flag
     },
     verified: {
         type: DataTypes.BOOLEAN,
