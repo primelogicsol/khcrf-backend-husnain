@@ -28,7 +28,7 @@ const register = async (req, res) => {
 
                 // Send OTP via email
                 const subject = 'Verify your email';
-                const text = `Your OTP for email verification is: ${otp}`;
+                const text = `Hamadan Craft Revival Foundation\nYour OTP for email verification is: ${otp}`;
                 await sendEmail(email, subject, text);
 
                 return res.status(200).json({ message: 'OTP has been resent. Please check your email for the new OTP.' });
