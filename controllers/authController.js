@@ -28,6 +28,7 @@ const register = async (req, res) => {
 
                 // Send OTP via email
                 const subject = 'Verify your email';
+                const text = 'Hamadan Craft Revival Foundation';
                 const text = `Your OTP for email verification is: ${otp}`;
                 await sendEmail(email, subject, text);
 
