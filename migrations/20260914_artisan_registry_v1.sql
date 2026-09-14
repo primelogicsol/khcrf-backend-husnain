@@ -1,0 +1,165 @@
+CREATE TABLE IF NOT EXISTS artisan_entities (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  entity_type ENUM('PERSON','ARTISAN_FAMILY','KARKHANA','COOPERATIVE','ORGANIZATION') NOT NULL,
+  canonical_name VARCHAR(255) NOT NULL,
+  status ENUM('ACTIVE','INACTIVE','UNKNOWN') NOT NULL DEFAULT 'UNKNOWN',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_entity_type_name (entity_type, canonical_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS artisans (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  entity_id BIGINT UNSIGNED NOT NULL,
+  khcrf_master_id VARCHAR(64) NOT NULL UNIQUE,
+  full_name VARCHAR(255) NOT NULL,
+  source_name VARCHAR(255) NULL,
+  parent_spouse_name VARCHAR(255) NULL,
+  gender ENUM('MALE','FEMALE','OTHER','UNKNOWN') NOT NULL DEFAULT 'UNKNOWN',
+  birth_year SMALLINT NULL,
+  life_status ENUM('LIVING','DECEASED','UNKNOWN') NOT NULL DEFAULT 'UNKNOWN',
+  practice_status ENUM('ACTIVE','INACTIVE','UNKNOWN') NOT NULL DEFAULT 'UNKNOWN',
+  primary_district_code VARCHAR(32) NULL,
+  primary_craft_code VARCHAR(64) NULL,
+  verification_status ENUM('VERIFIED','STRONG','PROVISIONAL','WEAK','CONFLICTED') NOT NULL DEFAULT 'PROVISIONAL',
+  data_status ENUM('RAW','NORMALIZED','MATCHED','VERIFIED','CONFLICTED','REJECTED','PROVISIONAL') NOT NULL DEFAULT 'RAW',
+  confidence_grade ENUM('A','B','C','D') NOT NULL DEFAULT 'C',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_artisan_entity FOREIGN KEY (entity_id) REFERENCES artisan_entities(id),
+  INDEX idx_artisan_district_craft (primary_district_code, primary_craft_code),
+  INDEX idx_artisan_name (full_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS artisan_identifiers (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  artisan_id BIGINT UNSIGNED NOT NULL,
+  identifier_type ENUM('KHCRF_MASTER_ID','GOV_ARTISAN_ID','PEHCHAN_ID','GI_AUTHORIZED_USER','COOPERATIVE_ID','AWARD_REGISTRY_ID','OTHER_GOVERNMENT_ID','OTHER') NOT NULL,
+  identifier_value VARCHAR(255) NOT NULL,
+  issuing_authority VARCHAR(255) NULL,
+  issue_date DATE NULL,
+  expiry_date DATE NULL,
+  status VARCHAR(64) NULL,
+  craft_code VARCHAR(64) NULL,
+  gi_application_no VARCHAR(32) NULL,
+  verification_status ENUM('VERIFIED','STRONG','PROVISIONAL','WEAK','CONFLICTED') NOT NULL DEFAULT 'PROVISIONAL',
+  visibility ENUM('PUBLIC','MASKED','RESTRICTED','ADMIN_ONLY') NOT NULL DEFAULT 'PUBLIC',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_identifier_artisan FOREIGN KEY (artisan_id) REFERENCES artisans(id),
+  UNIQUE KEY uq_identifier_type_value (identifier_type, identifier_value),
+  INDEX idx_identifier_artisan (artisan_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS artisan_crafts (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  artisan_id BIGINT UNSIGNED NOT NULL,
+  craft_code VARCHAR(64) NOT NULL,
+  craft_name VARCHAR(255) NOT NULL,
+  role VARCHAR(128) NULL,
+  specialization VARCHAR(255) NULL,
+  skill_level VARCHAR(64) NULL,
+  years_experience SMALLINT NULL,
+  is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  active_status ENUM('ACTIVE','INACTIVE','UNKNOWN') NOT NULL DEFAULT 'UNKNOWN',
+  verification_status ENUM('VERIFIED','STRONG','PROVISIONAL','WEAK','CONFLICTED') NOT NULL DEFAULT 'PROVISIONAL',
+  visibility ENUM('PUBLIC','MASKED','RESTRICTED','ADMIN_ONLY') NOT NULL DEFAULT 'PUBLIC',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_craft_artisan FOREIGN KEY (artisan_id) REFERENCES artisans(id),
+  UNIQUE KEY uq_artisan_craft (artisan_id, craft_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS artisan_locations (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  artisan_id BIGINT UNSIGNED NOT NULL,
+  country VARCHAR(128) NOT NULL DEFAULT 'India',
+  state_ut VARCHAR(128) NOT NULL DEFAULT 'Jammu & Kashmir',
+  district_code VARCHAR(32) NULL,
+  district_name VARCHAR(128) NULL,
+  tehsil VARCHAR(128) NULL,
+  block_name VARCHAR(128) NULL,
+  village VARCHAR(128) NULL,
+  locality VARCHAR(255) NULL,
+  postal_code VARCHAR(20) NULL,
+  full_address TEXT NULL,
+  location_type ENUM('RESIDENCE','WORKSHOP','BUSINESS','SOURCE_REPORTED','OTHER') NOT NULL DEFAULT 'SOURCE_REPORTED',
+  is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  visibility ENUM('PUBLIC','MASKED','RESTRICTED','ADMIN_ONLY') NOT NULL DEFAULT 'PUBLIC',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_location_artisan FOREIGN KEY (artisan_id) REFERENCES artisans(id),
+  INDEX idx_location_geo (district_code, tehsil, block_name, village)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS artisan_contacts (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  artisan_id BIGINT UNSIGNED NOT NULL,
+  contact_type ENUM('PHONE','WHATSAPP','EMAIL','OTHER') NOT NULL,
+  contact_value VARCHAR(255) NOT NULL,
+  is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  verified_at DATETIME NULL,
+  visibility ENUM('PUBLIC','MASKED','RESTRICTED','ADMIN_ONLY') NOT NULL DEFAULT 'MASKED',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_contact_artisan FOREIGN KEY (artisan_id) REFERENCES artisans(id),
+  INDEX idx_contact_artisan (artisan_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS artisan_sources (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  source_type ENUM('GOVERNMENT_REGISTRY','GOVERNMENT_PDF','GI_REGISTRY','PEHCHAN','WEBSITE','NEWS','FIELD_RESEARCH','OTHER') NOT NULL,
+  authority VARCHAR(255) NULL,
+  title VARCHAR(500) NULL,
+  source_url TEXT NULL,
+  document_name VARCHAR(500) NULL,
+  publication_date DATE NULL,
+  retrieved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  page_number VARCHAR(32) NULL,
+  record_number VARCHAR(128) NULL,
+  dataset_version VARCHAR(128) NULL,
+  archive_reference VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS artisan_evidence (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  artisan_id BIGINT UNSIGNED NOT NULL,
+  source_id BIGINT UNSIGNED NOT NULL,
+  field_name VARCHAR(128) NOT NULL,
+  observed_value TEXT NULL,
+  confidence_grade ENUM('A','B','C','D') NOT NULL DEFAULT 'C',
+  verification_status ENUM('VERIFIED','STRONG','PROVISIONAL','WEAK','CONFLICTED') NOT NULL DEFAULT 'PROVISIONAL',
+  notes TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_evidence_artisan FOREIGN KEY (artisan_id) REFERENCES artisans(id),
+  CONSTRAINT fk_evidence_source FOREIGN KEY (source_id) REFERENCES artisan_sources(id),
+  INDEX idx_evidence_artisan_field (artisan_id, field_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS entity_relationships (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  from_entity_id BIGINT UNSIGNED NOT NULL,
+  to_entity_id BIGINT UNSIGNED NOT NULL,
+  relationship_type ENUM('MEMBER_OF','WORKS_AT','FOUNDED','TRAINED_BY','TEACHES','FAMILY_OF','DESCENDANT_OF','AFFILIATED_WITH','MANAGED_BY','OWNS','SUPPLIES_TO','PRODUCES_FOR','OTHER') NOT NULL,
+  start_date DATE NULL,
+  end_date DATE NULL,
+  verification_status ENUM('VERIFIED','STRONG','PROVISIONAL','WEAK','CONFLICTED') NOT NULL DEFAULT 'PROVISIONAL',
+  visibility ENUM('PUBLIC','MASKED','RESTRICTED','ADMIN_ONLY') NOT NULL DEFAULT 'PUBLIC',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_rel_from FOREIGN KEY (from_entity_id) REFERENCES artisan_entities(id),
+  CONSTRAINT fk_rel_to FOREIGN KEY (to_entity_id) REFERENCES artisan_entities(id),
+  INDEX idx_rel_from (from_entity_id),
+  INDEX idx_rel_to (to_entity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS data_conflicts (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  artisan_id BIGINT UNSIGNED NOT NULL,
+  field_name VARCHAR(128) NOT NULL,
+  status ENUM('OPEN','RESOLVED','ACCEPTED_VARIANT') NOT NULL DEFAULT 'OPEN',
+  canonical_value TEXT NULL,
+  resolution_notes TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved_at DATETIME NULL,
+  CONSTRAINT fk_conflict_artisan FOREIGN KEY (artisan_id) REFERENCES artisans(id),
+  INDEX idx_conflict_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
